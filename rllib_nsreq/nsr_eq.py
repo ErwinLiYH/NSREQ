@@ -12,7 +12,7 @@ See `simple_q_[tf|torch]_policy.py` for the definition of the policy loss.
 import logging
 from typing import List, Optional, Type, Union
 
-from rllib_simple_dqn.simple_q_torch_policy import SimpleQTorchPolicy
+from .nsr_eq_torch_policy import NSREQTorchPolicy
 
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig, NotProvided
@@ -42,64 +42,11 @@ logger = logging.getLogger(__name__)
 from tqdm import tqdm
 
 
-class SimpleQConfig(AlgorithmConfig):
-    """Defines a configuration class from which a SimpleQ Algorithm can be built.
-
-    Example:
-        >>> from rllib_simple_dqn import SimpleQConfig
-        >>> config = SimpleQConfig()
-        >>> print(config.replay_buffer_config)  # doctest: +SKIP
-        >>> replay_config = config.replay_buffer_config.update(
-        >>>     {
-        >>>         "capacity":  40000,
-        >>>     }
-        >>> )
-        >>> config.training(replay_buffer_config=replay_config)\
-        ...       .resources(num_gpus=1)\
-        ...       .rollouts(num_rollout_workers=3)
-
-    Example:
-        >>> from rllib_simple_dqn import SimpleQConfig
-        >>> from ray import air
-        >>> from ray import tune
-        >>> config = SimpleQConfig()
-        >>> config.training(adam_epsilon=tune.grid_search([1e-8, 5e-8, 1e-7])
-        >>> config.environment(env="CartPole-v1")
-        >>> tune.Tuner(  # doctest: +SKIP
-        ...     "SimpleQ",
-        ...     run_config=air.RunConfig(stop={"episode_reward_mean": 200}),
-        ...     param_space=config.to_dict()
-        ... ).fit()
-
-    Example:
-        >>> from rllib_simple_dqn import SimpleQConfig
-        >>> config = SimpleQConfig()
-        >>> print(config.exploration_config)  # doctest: +SKIP
-        >>> explore_config = config.exploration_config.update(
-        >>>     {
-        >>>         "initial_epsilon": 1.5,
-        >>>         "final_epsilon": 0.01,
-        >>>         "epsilon_timesteps": 5000,
-        >>>     })
-        >>> config = SimpleQConfig().rollouts(rollout_fragment_length=32)\
-        >>>                         .exploration(exploration_config=explore_config)\
-
-    Example:
-        >>> from rllib_simple_dqn import SimpleQConfig
-        >>> config = SimpleQConfig()
-        >>> print(config.exploration_config)  # doctest: +SKIP
-        >>> explore_config = config.exploration_config.update(
-        >>>     {
-        >>>         "type": "softq",
-        >>>         "temperature": [1.0],
-        >>>     })
-        >>> config = SimpleQConfig().training(lr_schedule=[[1, 1e-3], [500, 5e-3]])\
-        >>>                         .exploration(exploration_config=explore_config)
-    """
+class NSREQConfig(AlgorithmConfig):
 
     def __init__(self, algo_class=None):
-        """Initializes a SimpleQConfig instance."""
-        super().__init__(algo_class=algo_class or SimpleQ)
+        """Initializes a NSREQConfig instance."""
+        super().__init__(algo_class=algo_class or NSREQ)
 
         # Simple Q specific
         # fmt: off
@@ -178,7 +125,7 @@ class SimpleQConfig(AlgorithmConfig):
         collect_size: Optional[float] = NotProvided,
         train_times_per_step: Optional[float] = NotProvided,
         **kwargs,
-    ) -> "SimpleQConfig":
+    ) -> "NSREQConfig":
         """Sets the training related configuration.
 
         Args:
@@ -291,11 +238,11 @@ class SimpleQConfig(AlgorithmConfig):
             validate_buffer_config(self)
 
 
-class SimpleQ(Algorithm):
+class NSREQ(Algorithm):
     @classmethod
     @override(Algorithm)
     def get_default_config(cls) -> AlgorithmConfig:
-        return SimpleQConfig()
+        return NSREQConfig()
 
     @classmethod
     @override(Algorithm)
@@ -303,15 +250,15 @@ class SimpleQ(Algorithm):
         cls, config: AlgorithmConfig
     ) -> Optional[Type[Policy]]:
         if config["framework"] == "torch":
-            return SimpleQTorchPolicy
+            return NSREQTorchPolicy
         else:
             raise ValueError("Only PyTorch is supported for Simple DQN.")
 
     @override(Algorithm)
     def training_step(self) -> ResultDict:
-        """Simple Q training iteration function.
+        """NSREQ training iteration function.
 
-        Simple Q consists of the following steps:
+        NSREQ consists of the following steps:
         - Sample n MultiAgentBatches from n workers synchronously.
         - Store new samples in the replay buffer.
         - Sample one training MultiAgentBatch from the replay buffer.

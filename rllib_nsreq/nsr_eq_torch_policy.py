@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List, Tuple, Type, Union
 
-from rllib_simple_dqn.utils import make_q_models
+from .utils import make_model
 
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.torch.torch_action_dist import (
@@ -27,7 +27,7 @@ if nn:
 logger = logging.getLogger(__name__)
 
 
-class SimpleQTorchPolicy(
+class NSREQTorchPolicy(
     LearningRateSchedule,
     TargetNetworkMixin,
     TorchPolicyV2,
@@ -53,8 +53,7 @@ class SimpleQTorchPolicy(
     @override(TorchPolicyV2)
     def make_model(self) -> ModelV2:
         """Builds q_model and target_model for Simple Q learning."""
-        model, self.target_model = make_q_models(self)
-        return model
+        return make_model(self)
 
     @override(TorchPolicyV2)
     def compute_actions(

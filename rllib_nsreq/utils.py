@@ -7,7 +7,7 @@ Q_SCOPE = "q_func"
 Q_TARGET_SCOPE = "target_q_func"
 
 
-def make_q_models(policy):
+def make_model(policy):
     if not isinstance(policy.action_space, gym.spaces.Discrete):
         raise UnsupportedSpaceException(
             f"Action space {policy.action_space} is not supported for DQN."
@@ -22,13 +22,4 @@ def make_q_models(policy):
         name=Q_SCOPE,
     )
 
-    target_model = ModelCatalog.get_model_v2(
-        obs_space=policy.observation_space,
-        action_space=policy.action_space,
-        num_outputs=policy.action_space.n,
-        model_config=policy.config["model"],
-        framework=policy.config["framework"],
-        name=Q_TARGET_SCOPE,
-    )
-
-    return model, target_model
+    return model
