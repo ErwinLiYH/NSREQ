@@ -52,7 +52,7 @@ class NSREQTorchPolicy(
 
     @override(TorchPolicyV2)
     def make_model(self) -> ModelV2:
-        """Builds q_model and target_model for Simple Q learning."""
+        """Builds q_model for Simple Q learning."""
         return make_model(self)
 
     @override(TorchPolicyV2)
@@ -100,7 +100,7 @@ class NSREQTorchPolicy(
         dist_class: Type[TorchDistributionWrapper],
         train_batch: SampleBatch,
     ) -> Union[TensorType, List[TensorType]]:
-        """Compute loss for SimpleQ.
+        """Compute loss for NSREQ.
 
         Args:
             model: The Model to calculate the loss for.
@@ -108,9 +108,8 @@ class NSREQTorchPolicy(
             train_batch: The training data.
 
         Returns:
-            The SimpleQ loss tensor given the input batch.
+            The NSREQ loss tensor given the input batch.
         """
-        target_model = self.target_models[model]
 
         # q network evaluation
         q_t = self._compute_q_values(
@@ -121,7 +120,7 @@ class NSREQTorchPolicy(
 
         # target q network evalution
         q_tp1 = self._compute_q_values(
-            target_model,
+            model,
             train_batch[SampleBatch.NEXT_OBS],
             is_training=True,
         )
