@@ -26,6 +26,8 @@ if nn:
     F = nn.functional
 logger = logging.getLogger(__name__)
 
+import pickle
+
 
 class NSREQTorchPolicy(
     LearningRateSchedule,
@@ -186,36 +188,45 @@ class NSREQTorchPolicy(
         other_agent_batches = None,
         episode = None,
     ):  
-        if isinstance(sample_batch[SampleBatch.INFOS][0], dict):
-            n_step = self.config["keep_n_steps"]
-            # compute action keep times to info
-            for i in range(len(sample_batch)):
-                k = 0
-                # look next
-                next_bound = min(i + 1 + n_step, len(sample_batch))
-                for j in range(i+1, next_bound):
-                    to_continue = (
-                        sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
-                        sample_batch[SampleBatch.DONES][j] == False and                                   # not done
-                        sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
-                        sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
-                    )
-                    if to_continue:
-                        k += 1
-                    else:
-                        break
-                # look prev
-                prev_bound = max(i -1 - n_step, -1)
-                for j in range(i-1, prev_bound, -1):
-                    to_continue = (
-                        sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
-                        sample_batch[SampleBatch.DONES][j] == False and                                   # not done
-                        sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
-                        sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
-                    )
-                    if to_continue:
-                        k += 1
-                    else:
-                        break
-                sample_batch[SampleBatch.INFOS][i]["keep_times"] = k
+        try:
+            if (
+                isinstance(sample_batch[SampleBatch.INFOS][0], dict) and   # ray will use fack datas to check API before formal training, infos will be 0
+                SampleBatch.ACTIONS in sample_batch.keys()                 # when evaluation, there is no action in sample_batch
+                                                                           # and also we dont need to compute keep_times when evaluation
+            ):
+                n_step = self.config["keep_n_steps"]
+                # compute action keep times to info
+                for i in range(len(sample_batch)):
+                    k = 0
+                    # look next
+                    next_bound = min(i + 1 + n_step, len(sample_batch))
+                    for j in range(i+1, next_bound):
+                        to_continue = (
+                            sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
+                            sample_batch[SampleBatch.DONES][j] == False and                                   # not done
+                            sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
+                            sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
+                        )
+                        if to_continue:
+                            k += 1
+                        else:
+                            break
+                    # look prev
+                    prev_bound = max(i -1 - n_step, -1)
+                    for j in range(i-1, prev_bound, -1):
+                        to_continue = (
+                            sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
+                            sample_batch[SampleBatch.DONES][j] == False and                                   # not done
+                            sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
+                            sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
+                        )
+                        if to_continue:
+                            k += 1
+                        else:
+                            break
+                    sample_batch[SampleBatch.INFOS][i]["keep_times"] = k
+        except Exception as e:
+            with open("batch.pkl", "wb") as f:
+                pickle.dump(sample_batch, f)
+            raise Exception(f"Error in postprocess_trajectory: \n{e}")
         return sample_batch
