@@ -1,12 +1,12 @@
-from rllib_simple_dqn.simple_q import SimpleQ, SimpleQConfig
-from rllib_simple_dqn.simple_q_torch_policy import SimpleQTorchPolicy
+from .nsr_eq import NSREQConfig, NSREQ
+from .nsr_eq_torch_policy import NSREQTorchPolicy
 
 from ray.tune.registry import register_trainable
 
 __all__ = [
-    "SimpleQ",
-    "SimpleQConfig",
-    "SimpleQTorchPolicy",
+    "NSREQ",
+    "NSREQConfig",
+    "NSREQTorchPolicy",
 ]
 
-register_trainable("rllib-contrib-simple-dqn", SimpleQ)
+register_trainable("rllib-contrib-simple-dqn", NSREQ)
