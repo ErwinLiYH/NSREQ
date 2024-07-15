@@ -38,8 +38,6 @@ from ray.rllib.utils.typing import ResultDict
 
 logger = logging.getLogger(__name__)
 
-from tqdm import tqdm
-
 
 class NSREQConfig(AlgorithmConfig):
 
@@ -275,7 +273,7 @@ class NSREQ(Algorithm):
         batch_size = self.config.train_batch_size
         local_worker = self.workers.local_worker()
 
-        print("begin to collect batches from envs")
+        # print("begin to collect batches from envs")
 
         # Sample n MultiAgentBatches from n workers.
         with self._timers[SAMPLE_TIMER]:
@@ -285,7 +283,7 @@ class NSREQ(Algorithm):
                 sample_timeout_s = self.config.sample_timeout_s
             )
 
-        print("finish collect batches from envs, store to buffer")
+        # print("finish collect batches from envs, store to buffer")
         
         for batch in new_sample_batches:
             # Update sampling step counters.
@@ -304,10 +302,10 @@ class NSREQ(Algorithm):
             else NUM_ENV_STEPS_SAMPLED
         ]
 
-        print("begin to train on the buffer")
+        # print("begin to train on the buffer")
         
         if cur_ts > self.config.num_steps_sampled_before_learning_starts:
-            for _ in tqdm(range(self.config.train_times_per_step * self.config.collect_size)):
+            for _ in range(self.config.train_times_per_step * self.config.collect_size):
                 # Use deprecated replay() to support old replay buffers for now
                 train_batch = self.local_replay_buffer.sample(batch_size)
 
