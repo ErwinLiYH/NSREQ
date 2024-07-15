@@ -82,6 +82,7 @@ class NSREQConfig(AlgorithmConfig):
         self.train_batch_size = 32
         self.collect_size = 1500
         self.train_times_per_step = 1
+        self.keep_n_steps = 10
 
         # `exploration()`
         self.exploration_config = {
@@ -123,6 +124,7 @@ class NSREQConfig(AlgorithmConfig):
         tau: Optional[float] = NotProvided,
         collect_size: Optional[float] = NotProvided,
         train_times_per_step: Optional[float] = NotProvided,
+        keep_n_steps: Optional[int] = NotProvided,
         **kwargs,
     ) -> "NSREQConfig":
         """Sets the training related configuration.
@@ -212,6 +214,8 @@ class NSREQConfig(AlgorithmConfig):
             self.collect_size = collect_size
         if train_times_per_step is not NotProvided:
             self.train_times_per_step = train_times_per_step
+        if keep_n_steps is not NotProvided:
+            self.keep_n_steps = keep_n_steps
         if num_steps_sampled_before_learning_starts is not NotProvided:
             self.num_steps_sampled_before_learning_starts = (
                 num_steps_sampled_before_learning_starts

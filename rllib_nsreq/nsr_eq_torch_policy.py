@@ -178,3 +178,44 @@ class NSREQTorchPolicy(
         # Make sure, everything is PyTorch tensors.
         model_out, _ = model(input_dict, [], None)
         return model_out
+
+    @override(TorchPolicyV2)
+    def postprocess_trajectory(
+        self,
+        sample_batch,
+        other_agent_batches = None,
+        episode = None,
+    ):  
+        if isinstance(sample_batch[SampleBatch.INFOS][0], dict):
+            n_step = self.config["keep_n_steps"]
+            # compute action keep times to info
+            for i in range(len(sample_batch)):
+                k = 0
+                # look next
+                next_bound = min(i + 1 + n_step, len(sample_batch))
+                for j in range(i+1, next_bound):
+                    to_continue = (
+                        sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
+                        sample_batch[SampleBatch.DONES][j] == False and                                   # not done
+                        sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
+                        sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
+                    )
+                    if to_continue:
+                        k += 1
+                    else:
+                        break
+                # look prev
+                prev_bound = max(i -1 - n_step, -1)
+                for j in range(i-1, prev_bound, -1):
+                    to_continue = (
+                        sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
+                        sample_batch[SampleBatch.DONES][j] == False and                                   # not done
+                        sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
+                        sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
+                    )
+                    if to_continue:
+                        k += 1
+                    else:
+                        break
+                sample_batch[SampleBatch.INFOS][i]["keep_times"] = k
+        return sample_batch
