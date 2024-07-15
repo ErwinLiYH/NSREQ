@@ -11,7 +11,7 @@ from ray.rllib.models.torch.torch_action_dist import (
     TorchDistributionWrapper,
 )
 from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.policy.torch_mixins import LearningRateSchedule, TargetNetworkMixin
+from ray.rllib.policy.torch_mixins import LearningRateSchedule
 from ray.rllib.policy.torch_policy_v2 import TorchPolicyV2
 from ray.rllib.utils.annotations import override
 from ray.rllib.utils.framework import try_import_torch
@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 class NSREQTorchPolicy(
     LearningRateSchedule,
-    TargetNetworkMixin,
     TorchPolicyV2,
 ):
     """PyTorch policy class used with SimpleQTrainer."""
@@ -47,8 +46,6 @@ class NSREQTorchPolicy(
 
         # TODO: Don't require users to call this manually.
         self._initialize_loss_from_dummy_batch()
-
-        TargetNetworkMixin.__init__(self)
 
     @override(TorchPolicyV2)
     def make_model(self) -> ModelV2:
