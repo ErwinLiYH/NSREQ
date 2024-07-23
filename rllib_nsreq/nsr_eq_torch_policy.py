@@ -27,6 +27,8 @@ if nn:
 logger = logging.getLogger(__name__)
 
 import pickle
+import torch
+import copy
 
 
 class NSREQTorchPolicy(
@@ -117,30 +119,22 @@ class NSREQTorchPolicy(
             is_training=True
         )
 
-        # target q network evalution
-        q_tp1 = self._compute_q_values(
-            model,
-            train_batch[SampleBatch.NEXT_OBS],
-            is_training=True,
-        )
-
         # q scores for actions which we know were selected in the given state.
         one_hot_selection = F.one_hot(
             train_batch[SampleBatch.ACTIONS].long(), self.action_space.n
         )
         q_t_selected = torch.sum(q_t * one_hot_selection, 1)
 
-        # compute estimate of best possible value starting from state at t + 1
-        dones = train_batch[SampleBatch.TERMINATEDS].float()
-        q_tp1_best_one_hot_selection = F.one_hot(
-            torch.argmax(q_tp1, 1), self.action_space.n
-        )
-        q_tp1_best = torch.sum(q_tp1 * q_tp1_best_one_hot_selection, 1)
-        q_tp1_best_masked = (1.0 - dones) * q_tp1_best
+        # compute KEEPs
+        if isinstance(train_batch[SampleBatch.INFOS][0], dict):
+            k = [i["keep_times"] for i in train_batch[SampleBatch.INFOS]]
+        else:
+            k = [0] * len(train_batch)
+        k = torch.tensor(k, dtype=torch.float32).to(self.device)
 
         # compute RHS of bellman equation
         q_t_selected_target = (
-            train_batch[SampleBatch.REWARDS] + self.config["gamma"] * q_tp1_best_masked
+            train_batch[SampleBatch.REWARDS] + k
         )
 
         # Compute the error (Square/Huber).
@@ -187,7 +181,8 @@ class NSREQTorchPolicy(
         sample_batch,
         other_agent_batches = None,
         episode = None,
-    ):  
+    ):
+        raw_b = copy.deepcopy(sample_batch)
         try:
             if (
                 isinstance(sample_batch[SampleBatch.INFOS][0], dict) and   # ray will use fack datas to check API before formal training, infos will be 0
@@ -225,7 +220,9 @@ class NSREQTorchPolicy(
                         else:
                             break
                     sample_batch[SampleBatch.INFOS][i]["keep_times"] = k
-        except Exception as e:
+        except Exception as e:                                                    # store the raw batch and batch for debug
+            with open("raw_batch.pkl", "wb") as f:
+                pickle.dump(raw_b, f)
             with open("batch.pkl", "wb") as f:
                 pickle.dump(sample_batch, f)
             raise Exception(f"Error in postprocess_trajectory: \n{e}")
