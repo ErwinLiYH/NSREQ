@@ -80,7 +80,8 @@ class NSREQConfig(AlgorithmConfig):
         self.train_batch_size = 32
         self.collect_size = 1500
         self.train_times_per_step = 1
-        self.keep_n_steps = 10
+        self.keep_n_steps = 30
+        self.gamma = 0.9
 
         # `exploration()`
         self.exploration_config = {

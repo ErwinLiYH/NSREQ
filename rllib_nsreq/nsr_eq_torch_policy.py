@@ -127,7 +127,7 @@ class NSREQTorchPolicy(
 
         # compute KEEPs
         if isinstance(train_batch[SampleBatch.INFOS][0], dict):
-            k = [i["keep_times"] for i in train_batch[SampleBatch.INFOS]]
+            k = [i["keep_return"] for i in train_batch[SampleBatch.INFOS]]
         else:
             k = [0] * len(train_batch)
         k = torch.tensor(k, dtype=torch.float32).to(self.device)
@@ -192,34 +192,25 @@ class NSREQTorchPolicy(
                 n_step = self.config["keep_n_steps"]
                 # compute action keep times to info
                 for i in range(len(sample_batch)):
-                    k = 0
+                    k = sample_batch[SampleBatch.INFOS][0]["changes_RB_rew"]
+                    n = 1
                     # look next
-                    next_bound = min(i + 1 + n_step, len(sample_batch))
-                    for j in range(i+1, next_bound):
-                        to_continue = (
-                            sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
-                            sample_batch[SampleBatch.DONES][j] == False and                                   # not done
-                            sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
-                            sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
-                        )
-                        if to_continue:
-                            k += 1
-                        else:
-                            break
-                    # look prev
-                    prev_bound = max(i -1 - n_step, -1)
-                    for j in range(i-1, prev_bound, -1):
-                        to_continue = (
-                            sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
-                            sample_batch[SampleBatch.DONES][j] == False and                                   # not done
-                            sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
-                            sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
-                        )
-                        if to_continue:
-                            k += 1
-                        else:
-                            break
-                    sample_batch[SampleBatch.INFOS][i]["keep_times"] = k
+                    if (
+                        sample_batch[SampleBatch.INFOS][i]["bad_SE"] == 0 and
+                        sample_batch[SampleBatch.INFOS][i]["SLA_violation"] == 0
+                    ):
+                        next_bound = min(i + 1 + n_step, len(sample_batch))
+                        for j in range(i+1, next_bound):
+                            to_continue = (
+                                sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
+                                sample_batch[SampleBatch.DONES][i] == False and                                   # not done
+                                sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
+                                sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
+                            )
+                            if to_continue:
+                                k += (self.config["gamma"] ** n) * sample_batch[SampleBatch.INFOS][j]["changes_RB_rew"]
+                            n += 1
+                    sample_batch[SampleBatch.INFOS][i]["keep_return"] = k
         except Exception as e:                                                    # store the raw batch and batch for debug
             with open("raw_batch.pkl", "wb") as f:
                 pickle.dump(raw_b, f)
