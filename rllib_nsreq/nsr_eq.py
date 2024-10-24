@@ -280,7 +280,7 @@ class NSREQ(Algorithm):
         with self._timers[SAMPLE_TIMER]:
             new_sample_batches = synchronous_parallel_sample(
                 worker_set=self.workers, concat=False,
-                max_env_steps=self.config.collect_size,
+                max_env_steps=batch_size,
                 sample_timeout_s = self.config.sample_timeout_s
             )
 
@@ -306,33 +306,33 @@ class NSREQ(Algorithm):
         # print("begin to train on the buffer")
         
         if cur_ts > self.config.num_steps_sampled_before_learning_starts:
-            for _ in range(int(self.config.train_times_per_step * self.config.collect_size)):
-                # Use deprecated replay() to support old replay buffers for now
-                train_batch = self.local_replay_buffer.sample(batch_size)
+            # for _ in range(int(self.config.train_times_per_step * self.config.collect_size)):
+            # Use deprecated replay() to support old replay buffers for now
+            train_batch = self.local_replay_buffer.sample(batch_size)
 
-                # Learn on the training batch.
-                # Use simple optimizer (only for multi-agent or tf-eager; all other
-                # cases should use the multi-GPU optimizer, even if only using 1 GPU)
-                if self.config.get("simple_optimizer") is True:
-                    train_results = train_one_step(self, train_batch)
-                else:
-                    train_results = multi_gpu_train_one_step(self, train_batch)
+            # Learn on the training batch.
+            # Use simple optimizer (only for multi-agent or tf-eager; all other
+            # cases should use the multi-GPU optimizer, even if only using 1 GPU)
+            if self.config.get("simple_optimizer") is True:
+                train_results = train_one_step(self, train_batch)
+            else:
+                train_results = multi_gpu_train_one_step(self, train_batch)
 
-                # Update replay buffer priorities.
-                update_priorities_in_replay_buffer(
-                    self.local_replay_buffer,
-                    self.config,
-                    train_batch,
-                    train_results,
+            # Update replay buffer priorities.
+            update_priorities_in_replay_buffer(
+                self.local_replay_buffer,
+                self.config,
+                train_batch,
+                train_results,
+            )
+
+            # Update weights and global_vars - after learning on the local worker -
+            # on all remote workers (only those policies that were actually trained).
+            with self._timers[SYNCH_WORKER_WEIGHTS_TIMER]:
+                self.workers.sync_weights(
+                    policies=list(train_results.keys()),
+                    global_vars=global_vars,
                 )
-
-                # Update weights and global_vars - after learning on the local worker -
-                # on all remote workers (only those policies that were actually trained).
-                with self._timers[SYNCH_WORKER_WEIGHTS_TIMER]:
-                    self.workers.sync_weights(
-                        policies=list(train_results.keys()),
-                        global_vars=global_vars,
-                    )
         else:
             train_results = {}
 
