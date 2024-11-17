@@ -194,22 +194,15 @@ class NSREQTorchPolicy(
                 for i in range(len(sample_batch)):
                     k = sample_batch[SampleBatch.INFOS][0]["changes_RB_rew"]
                     n = 1
-                    # look next
-                    if (
-                        sample_batch[SampleBatch.INFOS][i]["bad_SE"] == 0 and
-                        sample_batch[SampleBatch.INFOS][i]["SLA_violation"] == 0
-                    ):
-                        next_bound = min(i + 1 + n_step, len(sample_batch))
-                        for j in range(i+1, next_bound):
-                            to_continue = (
-                                sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
-                                sample_batch[SampleBatch.DONES][i] == False and                                   # not done
-                                sample_batch[SampleBatch.INFOS][j]["bad_SE"] == 0 and                             # efficient SE
-                                sample_batch[SampleBatch.INFOS][j]["SLA_violation"] == 0                          # no SLA violation
-                            )
-                            if to_continue:
-                                k += (self.config["gamma"] ** n) * sample_batch[SampleBatch.INFOS][j]["changes_RB_rew"]
-                            n += 1
+                    next_bound = min(i + 1 + n_step, len(sample_batch))
+                    for j in range(i+1, next_bound):
+                        to_continue = (
+                            sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
+                            sample_batch[SampleBatch.DONES][i] == False                                   # not done
+                        )
+                        if to_continue:
+                            k += (self.config["gamma"] ** n) * sample_batch[SampleBatch.INFOS][j]["changes_RB_rew"]
+                        n += 1
                     sample_batch[SampleBatch.INFOS][i]["keep_return"] = k
         except Exception as e:                                                    # store the raw batch and batch for debug
             with open("raw_batch.pkl", "wb") as f:
