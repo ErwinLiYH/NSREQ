@@ -192,7 +192,7 @@ class NSREQTorchPolicy(
                 n_step = self.config["keep_n_steps"]
                 # compute action keep times to info
                 for i in range(len(sample_batch)):
-                    k = sample_batch[SampleBatch.INFOS][0]["changes_RB_rew"]
+                    k = 0
                     n = 1
                     next_bound = min(i + 1 + n_step, len(sample_batch))
                     for j in range(i+1, next_bound):
