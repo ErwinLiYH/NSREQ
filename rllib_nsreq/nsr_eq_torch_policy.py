@@ -197,11 +197,11 @@ class NSREQTorchPolicy(
                     next_bound = min(i + 1 + n_step, len(sample_batch))
                     for j in range(i+1, next_bound):
                         to_continue = (
-                            sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
+                            # sample_batch[SampleBatch.ACTIONS][i] == sample_batch[SampleBatch.ACTIONS][j] and  # same action
                             sample_batch[SampleBatch.DONES][i] == False                                   # not done
                         )
                         if to_continue:
-                            k += (self.config["gamma"] ** n) * sample_batch[SampleBatch.INFOS][j]["changes_RB_rew"]
+                            k += (self.config["gamma"] ** n) * sample_batch[SampleBatch.INFOS][j]["RB_variation"]
                         n += 1
                     sample_batch[SampleBatch.INFOS][i]["keep_return"] = k
         except Exception as e:                                                    # store the raw batch and batch for debug
